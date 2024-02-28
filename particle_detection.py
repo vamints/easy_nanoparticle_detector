@@ -13,9 +13,11 @@ import PIL.ExifTags
 
 unit_dict = {'nm':1e-9,'um':1e-6,'mm':1e-3,'pm':1e-12}
 
+
 def empty_messages():
     coverage_results.config(text = "\n")
     l2.config(text = "")
+    result_label.config(text = "")
     return
 
 def load_image():
@@ -238,12 +240,15 @@ def detect_particles():
         histogram_path = results_folder+"/"+prefix+"_histogram_"+file_name+".png"
         cv.imwrite( os.path.join(new_file_path), im_with_particles);
 
-
+               
         metadata = {}
         metadata['source_file'] = file_path.get() 
         metadata['output_file'] = new_file_path
         metadata['particle_distribution_file'] = particle_data_path
-        metadata['histogram_figure'] = histogram_path        
+        metadata['histogram_figure'] = histogram_path
+        metadata['average_particle_diameter_px'] = 0
+        metadata['average_particle_diameter_nm'] = '0'
+        metadata['particles_detected'] = len(particles)
         metadata['minThreshold'] = minThreshold.get()
         metadata['maxThreshold'] = maxThreshold.get()
         metadata['thresholdStep'] = thresholdStep.get()
@@ -264,10 +269,7 @@ def detect_particles():
 
         metadata['pixelsize'] = str(pixelsize)+' nm'
 
-        metadata = pd.DataFrame.from_dict(metadata, orient='index')
 
-
-        metadata.to_csv(metadata_path,header=False)
 
         particle_data = pd.DataFrame(columns=['coordinates','diameter (px)','size (px^2)','diameter (nm)','size (nm^2)'])
         particle_data['size'] = np.zeros(len(particles))
@@ -279,17 +281,27 @@ def detect_particles():
             particle_data['diameter (nm)'][i] = true_particle_size
             particle_data['size (nm^2)'][i] = math.pi*(true_particle_size/2)**2
 
+        metadata['average_particle_diameter_px'] = str(particle_data['diameter (px)'].to_numpy().mean())+' px'
+        metadata['average_particle_diameter_nm'] = str(particle_data['diameter (nm)'].to_numpy().mean())+' nm'
+        metadata = pd.DataFrame.from_dict(metadata, orient='index')
+        metadata.to_csv(metadata_path,header=False)
 
         particle_data.to_csv(particle_data_path)
 
         canvas2.get_tk_widget().pack_forget() 
         fig2,ax2 = plt.subplots(figsize=(3,2))
+        result_message = ''
         if pixelsize > 0:
             ax2.hist((particle_data['diameter (nm)'].to_numpy()),bins=25)
+            result_message = 'Average particle diameter: {:.2f}'.format((particle_data['diameter (nm)'].to_numpy().mean()))+" nm"
             ax2.set_xlabel('particle diameter (nm)')
         else:
             ax2.hist((particle_data['diameter (px)'].to_numpy()),bins=25)
+            result_message = 'Average particle diameter: {:.2f}'.format((particle_data['diameter (px)'].to_numpy().mean()))+" nm"
             ax2.set_xlabel('particle diameter (px)')
+            
+        
+        coverage_results.config(text = result_message+"\nTotal particles detected: "+str(len(particles)))
         ax2.set_ylabel('frequency')
         fig2.tight_layout()
         fig2.savefig(histogram_path, dpi=300) 
@@ -397,7 +409,9 @@ def get_coverage():
 
     return
 
-root = tk.Tk()  
+
+root = tk.Tk()
+root.title("Simple TEM particle detector")  
 root.geometry("1200x850") 
 #variables in tkinter widget
 file_path = tk.StringVar()
