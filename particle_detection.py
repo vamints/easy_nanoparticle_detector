@@ -31,7 +31,7 @@ def load_image():
         img = cv.imread(file_path.get())
         canvas.get_tk_widget().pack_forget() 
         fig, ax = plt.subplots(figsize=(10,10),dpi=300)
-        ax.imshow(img)
+        ax.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
         ax.axis('off')
         canvas = FigureCanvasTkAgg(fig, root)
         canvas.get_tk_widget().pack(padx = 20,pady = (30,0))
@@ -90,7 +90,7 @@ def soft_load_image():
         img = cv.imread(file_path.get())
         canvas.get_tk_widget().pack_forget() 
         fig, ax = plt.subplots(figsize=(10,10),dpi=300)
-        ax.imshow(img)
+        ax.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
         ax.axis('off')
         canvas = FigureCanvasTkAgg(fig, root)
         canvas.get_tk_widget().pack(padx = 20,pady = (30,0))
@@ -314,7 +314,7 @@ def detect_particles():
 
         canvas.get_tk_widget().pack_forget() 
         fig, ax = plt.subplots(figsize=(10,10),dpi=300)
-        ax.imshow(im_with_particles)
+        ax.imshow(cv.cvtColor(im_with_particles, cv.COLOR_BGR2RGB))
         ax.axis('off')
         fig.tight_layout()
         canvas = FigureCanvasTkAgg(fig, root)
@@ -392,7 +392,7 @@ def get_coverage():
 
         fig, ax = plt.subplots(figsize=(10,10),dpi=300)
 
-        ax.imshow(im_bw,alpha=1,cmap='gray', vmin=0, vmax=255)
+        ax.imshow(cv.cvtColor(im_bw, cv.COLOR_BGR2RGB),alpha=1,cmap='gray', vmin=0, vmax=255)
         #ax.imshow(img,alpha=0.5)
         ax.axis('off')
         fig.tight_layout()
@@ -400,7 +400,7 @@ def get_coverage():
         canvas.get_tk_widget().pack(padx = 5,pady = (30,0))
 
         fig2, ax2 = plt.subplots(figsize=(3,3))    
-        ax2.imshow(img)
+        ax2.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
         ax2.axis('off')
         fig2.tight_layout()
         canvas2 = FigureCanvasTkAgg(fig2, area_frame)
@@ -411,6 +411,7 @@ def get_coverage():
         l2.config(text = "No file found")
 
     return
+
 
 root = tk.Tk()  
 root.title("Simple TEM particle detector")  
