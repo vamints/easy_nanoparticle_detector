@@ -235,7 +235,7 @@ def detect_particles():
         new_file_path = results_folder+"/"+prefix+"_detected_particles_"+file_name+".png"
         metadata_path = results_folder+"/"+prefix+"_metadata_"+file_name+".csv"     
         particle_data_path = results_folder+"/"+prefix+"_particle_distribution_"+file_name+".csv"
-
+        histogram_path = results_folder+"/"+prefix+"_histogram_"+file_name+".png"
         cv.imwrite( os.path.join(new_file_path), im_with_particles);
 
 
@@ -243,6 +243,7 @@ def detect_particles():
         metadata['source_file'] = file_path.get() 
         metadata['output_file'] = new_file_path
         metadata['particle_distribution_file'] = particle_data_path
+        metadata['histogram_figure'] = histogram_path        
         metadata['minThreshold'] = minThreshold.get()
         metadata['maxThreshold'] = maxThreshold.get()
         metadata['thresholdStep'] = thresholdStep.get()
@@ -291,6 +292,8 @@ def detect_particles():
             ax2.set_xlabel('particle diameter (px)')
         ax2.set_ylabel('frequency')
         fig2.tight_layout()
+        fig2.savefig(histogram_path, dpi=300) 
+        
         canvas2 = FigureCanvasTkAgg(fig2, area_frame)
         canvas2.get_tk_widget().pack(pady = (10,0))
 
