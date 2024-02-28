@@ -15,6 +15,7 @@ unit_dict = {'nm':1e-9,'um':1e-6,'mm':1e-3,'pm':1e-12}
 
 
 def empty_messages():
+    global canvas,canvas2
     coverage_results.config(text = "\n")
     l2.config(text = "")
     result_label.config(text = "")
@@ -195,8 +196,6 @@ def detect_particles():
     global canvas,canvas2
     empty_messages()
     try:    
-        result_label.config(text = "Calculating Particles")
-
         file_name = file_path.get()    
         img = cv.imread(file_name)  
 
@@ -219,6 +218,7 @@ def detect_particles():
 
         params.filterByArea = filterByArea.get()
         params.minArea = minArea.get()
+        params.maxArea = maxArea.get()
 
         params.filterByCircularity = filterByCircularity.get()
         params.minCircularity = minCircularity.get()
@@ -260,6 +260,7 @@ def detect_particles():
         metadata['minInertiaRatio'] = minInertiaRatio.get()
         metadata['filterByArea'] = filterByArea.get()
         metadata['minArea'] = minArea.get()
+        metadata['maxArea'] = maxArea.get()
         metadata['filterByCircularity'] = filterByCircularity.get()
         metadata['minCircularity'] = minCircularity.get()
 
@@ -411,10 +412,9 @@ def get_coverage():
 
     return
 
-
-root = tk.Tk()
+root = tk.Tk()  
 root.title("Simple TEM particle detector")  
-root.geometry("1200x850") 
+root.geometry("1200x900") 
 #variables in tkinter widget
 file_path = tk.StringVar()
 v1 = tk.IntVar(value=79)
@@ -487,6 +487,7 @@ minInertiaRatio = tk.DoubleVar(value=0.08)
 
 filterByArea = tk.BooleanVar(value=True)
 minArea = tk.IntVar(value = 10) 
+maxArea = tk.IntVar(value = 1000000) 
 
 filterByCircularity = tk.BooleanVar(value=False)
 minCircularity = tk.DoubleVar(value = 0.1) 
@@ -528,10 +529,16 @@ e9 = tk.Entry(inertia_frame_2, textvariable=minInertiaRatio,width=5)
 
 area_frame_1 = tk.Frame(detect_frame,width=120)
 area_frame_2 = tk.Frame(detect_frame,width=120)
+area_frame_3 = tk.Frame(detect_frame,width=120)
 l10 = tk.Label(area_frame_1, text="Filter by Area",justify=tk.LEFT)
 l11 = tk.Label(area_frame_2, text="Minimal Area\nSize",justify=tk.LEFT)
+
+l11_1 = tk.Label(area_frame_3, text="Maximal Area\nSize",justify=tk.LEFT)
+s11_1 = tk.Scale(area_frame_3, variable = maxArea, from_ = 0, to = 1000000, resolution=1, orient = tk.HORIZONTAL)  
+e11_1 = tk.Entry(area_frame_3, textvariable=maxArea,width=10)
+
 r10 = tk.Checkbutton(area_frame_1, variable=filterByArea)
-s11 = tk.Scale(area_frame_2, variable = minArea, from_ = 0, to = 200, resolution=1, orient = tk.HORIZONTAL)  
+s11 = tk.Scale(area_frame_2, variable = minArea, from_ = 0, to = 300, resolution=1, orient = tk.HORIZONTAL)  
 e11 = tk.Entry(area_frame_2, textvariable=minArea,width=5)
 
 circularity_frame_1 = tk.Frame(detect_frame,width=120)
@@ -592,6 +599,10 @@ e11.pack(side=tk.RIGHT,pady=(17,0))
 s11.pack(side=tk.RIGHT,padx=(30,0))
 area_frame_2.pack(anchor=tk.NW)
 
+l11_1.pack(side=tk.LEFT)
+e11_1.pack(side=tk.RIGHT,pady=(17,0))
+s11_1.pack(side=tk.RIGHT,padx=(28,0))
+area_frame_3.pack(anchor=tk.NW)
 
 l12.pack(side=tk.LEFT)
 r12.pack(side=tk.RIGHT,padx=(0,0))
