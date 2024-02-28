@@ -18,6 +18,8 @@ def empty_messages():
     coverage_results.config(text = "\n")
     l2.config(text = "")
     result_label.config(text = "")
+    canvas.get_tk_widget().pack_forget() 
+    canvas2.get_tk_widget().pack_forget() 
     return
 
 def load_image():
@@ -431,7 +433,7 @@ control_frame = tk.Frame(root,width=320)
 
 l1 = tk.Label(control_frame, text='File loader',font=("Arial", 16))
 l1_1 = tk.Label(control_frame, text='File path')
-w1 = tk.Entry(control_frame, textvariable=file_path,width=40,justify=tk.LEFT)
+w1 = tk.Entry(control_frame, textvariable=file_path,width=50,justify=tk.LEFT)
 b1 = tk.Button(control_frame, text="load image", command=load_image)
 l2 = tk.Label(control_frame, text="",fg='red')
 
@@ -529,7 +531,7 @@ area_frame_2 = tk.Frame(detect_frame,width=120)
 l10 = tk.Label(area_frame_1, text="Filter by Area",justify=tk.LEFT)
 l11 = tk.Label(area_frame_2, text="Minimal Area\nSize",justify=tk.LEFT)
 r10 = tk.Checkbutton(area_frame_1, variable=filterByArea)
-s11 = tk.Scale(area_frame_2, variable = minArea, from_ = 0, to = 100, resolution=1, orient = tk.HORIZONTAL)  
+s11 = tk.Scale(area_frame_2, variable = minArea, from_ = 0, to = 200, resolution=1, orient = tk.HORIZONTAL)  
 e11 = tk.Entry(area_frame_2, textvariable=minArea,width=5)
 
 circularity_frame_1 = tk.Frame(detect_frame,width=120)
