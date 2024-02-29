@@ -17,3 +17,6 @@ To run the widget:
 2. cd /d "directory where particle_detection.py is located"
 3. python particle_detection.py
 
+Or
+
+1. The quickstart calls the default anaconda environment and then launches the python script
