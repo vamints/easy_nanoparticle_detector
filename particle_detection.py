@@ -534,6 +534,7 @@ crop_frame.pack(anchor=tk.NW)
 preproces_glob_frame.pack(anchor=tk.NW)
 
 b3_1.pack(anchor=tk.NW)
+pixel_size_label.pack(anchor=tk.NW)
 
 preproces_frame_1.pack(side=tk.LEFT,anchor=tk.NW)
 preproces_frame_2.pack(side=tk.RIGHT,anchor=tk.NW,padx=15)
