@@ -524,7 +524,7 @@ inertia_frame_1 = tk.Frame(detect_frame,width=120)
 inertia_frame_2 = tk.Frame(detect_frame,width=120)
 l8 = tk.Label(inertia_frame_1, text="Filter by Intertia",justify=tk.LEFT)
 l9 = tk.Label(inertia_frame_2, text="Minimal Inertia\nRatio",justify=tk.LEFT)
-r8 = tk.Checkbutton(inertia_frame_1, variable=filterByConvexity)
+r8 = tk.Checkbutton(inertia_frame_1, variable=filterByInertia)
 s9 = tk.Scale(inertia_frame_2, variable = minInertiaRatio, from_ = 0, to = 1, resolution=0.01, orient = tk.HORIZONTAL)  
 e9 = tk.Entry(inertia_frame_2, textvariable=minInertiaRatio,width=5)
 
