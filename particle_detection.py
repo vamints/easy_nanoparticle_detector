@@ -142,13 +142,21 @@ def invert_image():
         file_name = file_path.get()
         img = cv.imread(file_name)
         file_name = file_name.split('/')[-1][:-4]
-        if('_croped' == file_name[-7:]):
-            source_file_name += '_croped'
+        
         
         prefix = get_unique_prefix(results_folder)
+    
+        suffix = ''
         
-        new_file_path = results_folder+"/"+prefix+"_inverse_"+source_file_name+".png"
+        prefix += '_inverse'
+        
+        if('_enhanced_' in file_name):
+            prefix += '_enhanced'
 
+        if('_croped' in file_name):
+            suffix = '_croped'
+
+        new_file_path = results_folder+"/"+prefix+'_'+source_file_name+suffix+".png"  
         
         cv.imwrite( os.path.join(new_file_path), ~img );
         w1.delete(0,tk.END)
@@ -174,13 +182,19 @@ def crop_image():
         results_folder = 'Results/'+source_file_name
 
         file_name = file_name.split('/')[-1]
-        if('_inverse_' == file_name[4:13]):
-            source_file_name = 'inverse_'+source_file_name
-
+        
         prefix = get_unique_prefix(results_folder)
+    
+        suffix = '_croped'
+                
+        if('_inverse_' in file_name):
+            prefix += '_inverse'        
+        
+        if('_enhanced_' in file_name):
+            prefix += '_enhanced'
 
-        new_file_path = results_folder+"/"+prefix+'_'+source_file_name+"_croped.png"
-
+        new_file_path = results_folder+"/"+prefix+'_'+source_file_name+suffix+".png"
+    
 
         w1.delete(0,tk.END)
         w1.insert(0,new_file_path)          
@@ -271,8 +285,6 @@ def detect_particles():
         pixelsize = float(pixelsize)*unit_dict[pixelsizeunits]/unit_dict['nm']
 
         metadata['pixelsize'] = str(pixelsize)+' nm'
-
-
 
         particle_data = pd.DataFrame(columns=['coordinates','diameter (px)','size (px^2)','diameter (nm)','size (nm^2)'])
         particle_data['size'] = np.zeros(len(particles))
@@ -412,6 +424,44 @@ def get_coverage():
 
     return
 
+def enhance_contrast():
+    empty_messages()
+       
+    file_name = file_path.get()
+
+    img = cv.imread(file_name)  
+    img = img-np.amin(img)
+    img = img*(255/np.amax(img))
+
+    file_name = file_name.split('/')[-1]
+
+    source_file_name = h1.cget("text")[:-4]
+    results_folder = 'Results/'+source_file_name
+
+    file_name = file_name.split('/')[-1]
+    
+    prefix = get_unique_prefix(results_folder)
+    
+    suffix = ''
+    
+    if('_inverse_' in file_name):
+        prefix += '_inverse'
+    
+    if('_croped' in file_name):
+        suffix = '_croped'
+    
+    prefix += '_enhanced'
+
+    new_file_path = results_folder+"/"+prefix+'_'+source_file_name+suffix+".png"
+
+
+    w1.delete(0,tk.END)
+    w1.insert(0,new_file_path)          
+    cv.imwrite(os.path.join(new_file_path), img)
+    result_label.config(text = "Results saved in: "+new_file_path)
+    soft_load_image()
+    
+    return
 
 root = tk.Tk()  
 root.title("Simple TEM particle detector")  
@@ -450,19 +500,27 @@ detect_frame = tk.Frame(analyze_frame,width=160)
 area_frame = tk.Frame(analyze_frame,width=160)
 #preprocessing
 
+preproces_glob_frame = tk.Frame(control_frame,width=320)
+preproces_frame_1 = tk.Frame(preproces_glob_frame,width=160)
+preproces_frame_2 = tk.Frame(preproces_glob_frame,width=160)
+
 l3 = tk.Label(control_frame, text="Preprocessing Steps",font=("Arial", 16))
-b2 = tk.Button(control_frame, text="Original", command=restore_original,width=31)
-b3 = tk.Button(control_frame, text="Invert Image", command=invert_image,width=31)
+b2 = tk.Button(preproces_frame_1, text="Original", command=restore_original,width=31)
+b3 = tk.Button(preproces_frame_1, text="Invert Image", command=invert_image,width=31)
 
 
-crop_frame = tk.Frame(control_frame,width=120)
+crop_frame = tk.Frame(preproces_frame_1,width=120)
 
 s1 = tk.Scale(crop_frame, variable = v1, from_ = 0, to = 150, resolution=1, orient = tk.HORIZONTAL) 
 e1_1 = tk.Entry(crop_frame, textvariable=v1,width=5)
 b4 = tk.Button(crop_frame, text="Crop Bottom", command=crop_image)
 
 
-pixel_size_label = tk.Label(control_frame, text="pixel width:",justify=tk.LEFT)
+pixel_size_label = tk.Label(preproces_frame_1, text="pixel width:",justify=tk.LEFT)
+
+
+b3_1 = tk.Button(preproces_frame_2, text="Enhance Contrast", command=enhance_contrast,width=31)
+
 
 l3.pack(anchor=tk.NW,pady = (10,0))
 b2.pack(anchor=tk.NW)
@@ -473,7 +531,13 @@ e1_1.pack(side=tk.LEFT,pady=(17,0))
 b4.pack(side=tk.RIGHT,pady = (8,0),padx=(7,0))
 crop_frame.pack(anchor=tk.NW)
 
-pixel_size_label.pack(anchor=tk.NW)
+preproces_glob_frame.pack(anchor=tk.NW)
+
+b3_1.pack(anchor=tk.NW)
+
+preproces_frame_1.pack(side=tk.LEFT,anchor=tk.NW)
+preproces_frame_2.pack(side=tk.RIGHT,anchor=tk.NW,padx=15)
+analyze_frame.pack()
 
 #particle detector
 minThreshold = tk.IntVar(value = 0) 
