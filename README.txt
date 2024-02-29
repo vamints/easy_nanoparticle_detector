@@ -17,6 +17,9 @@ To run the widget:
 2. cd /d "directory where particle_detection.py is located"
 3. python particle_detection.py
 
-Or
+Or if conda is the default python interpreter in the PATH variables
 
 1. The quickstart calls the default anaconda environment and then launches the python script
+
+When using please cite the package as:
+Mints, V. A. (2024). easy_nanoparticle_detector. GitHub. https://github.com/vamints/easy_nanoparticle_detector
