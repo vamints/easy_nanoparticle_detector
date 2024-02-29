@@ -84,8 +84,7 @@ def load_image():
     return
 
 def soft_load_image():
-    global h1,l2,canvas
-    empty_messages()
+    global h1,l2,canvas    
     try:
         img = cv.imread(file_path.get())
         canvas.get_tk_widget().pack_forget() 
@@ -208,8 +207,9 @@ def crop_image():
 
 def detect_particles():
     global canvas,canvas2
-    empty_messages()
-    try:    
+    try:
+        empty_messages()
+    
         file_name = file_path.get()    
         img = cv.imread(file_name)  
 
@@ -236,11 +236,14 @@ def detect_particles():
 
         params.filterByCircularity = filterByCircularity.get()
         params.minCircularity = minCircularity.get()
-
+        params.collectContours = True
+        
         detector = cv.SimpleBlobDetector_create(params)
-        particles = detector.detect(img)
-        im_with_particles = cv.drawKeypoints(img, particles, np.array([]), (0, 0, 255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        keypoints = detector.detect(img)
+        contours = detector.getBlobContours()
 
+        im_with_keypoints = cv.drawKeypoints(img, keypoints, np.array([]), (0, 0, 255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        im_with_particles = cv.drawContours(img, contours, -1, (0, 0, 255), 1)
 
         file_name = file_name.split('/')[-1][:-4]
 
@@ -250,21 +253,35 @@ def detect_particles():
         prefix = get_unique_prefix(results_folder)
 
 
-        new_file_path = results_folder+"/"+prefix+"_detected_particles_"+file_name+".png"
+        keypoint_file_path = results_folder+"/"+prefix+"_detected_keypoints_"+file_name+".png"
+        contour_file_path = results_folder+"/"+prefix+"_detected_particles_"+file_name+".png"
+        
         metadata_path = results_folder+"/"+prefix+"_metadata_"+file_name+".csv"     
-        particle_data_path = results_folder+"/"+prefix+"_particle_distribution_"+file_name+".csv"
+        keypoints_data_path = results_folder+"/"+prefix+"_keypoints_data_"+file_name+".csv"
+        particle_data_path = results_folder+"/"+prefix+"_particles_data_"+file_name+".csv"
         histogram_path = results_folder+"/"+prefix+"_histogram_"+file_name+".png"
-        cv.imwrite( os.path.join(new_file_path), im_with_particles);
+        
+        cv.imwrite( os.path.join(keypoint_file_path), im_with_keypoints);
+        cv.imwrite( os.path.join(contour_file_path), im_with_particles);
 
-               
         metadata = {}
         metadata['source_file'] = file_path.get() 
-        metadata['output_file'] = new_file_path
-        metadata['particle_distribution_file'] = particle_data_path
+        metadata['keypoints_figure_file'] = keypoint_file_path
+        metadata['keypoints_data_file'] = keypoints_data_path
+        metadata['keypoints_detected'] = len(keypoints)
+        metadata['particle_figure_file'] = contour_file_path
+        metadata['particles_data_file'] = particle_data_path
         metadata['histogram_figure'] = histogram_path
-        metadata['average_particle_diameter_px'] = 0
-        metadata['average_particle_diameter_nm'] = '0'
-        metadata['particles_detected'] = len(particles)
+        
+        metadata['perfect_circle_average_particle_diameter_px'] = 0
+        metadata['perfect_circle_average_particle_diameter_nm'] = '0'
+        metadata['true_average_particle_area_px'] = 0
+        metadata['true_average_particle_area_nm^2'] = 0    
+        metadata['estimated_average_particle_diameter_px'] = 0
+        metadata['estimated_average_particle_diameter_nm'] = '0'
+        
+        metadata['total_particles_detected'] = len(contours)
+        
         metadata['minThreshold'] = minThreshold.get()
         metadata['maxThreshold'] = maxThreshold.get()
         metadata['thresholdStep'] = thresholdStep.get()
@@ -285,42 +302,96 @@ def detect_particles():
         pixelsize = float(pixelsize)*unit_dict[pixelsizeunits]/unit_dict['nm']
 
         metadata['pixelsize'] = str(pixelsize)+' nm'
-
-        particle_data = pd.DataFrame(columns=['coordinates','diameter (px)','size (px^2)','diameter (nm)','size (nm^2)'])
-        particle_data['size'] = np.zeros(len(particles))
+        
+        keypoint_info_columns = ['coordinates',
+                                'diameter (px)',
+                                'size (px)',
+                                'diameter (nm)',
+                                'size (nm^2)']
+        
+        keypoints_data = pd.DataFrame(columns=keypoint_info_columns)
+        keypoints_data['size'] = np.zeros(len(keypoints))
+        for i in range(len(keypoints_data)):
+            keypoints_data['coordinates'][i] = keypoints[i].pt
+            keypoints_data['diameter (px)'][i] = keypoints[i].size
+            keypoints_data['size (px)'][i] = math.pi*(keypoints[i].size/2)**2
+            true_keypoint_size = pixelsize*keypoints[i].size
+            keypoints_data['diameter (nm)'][i] = true_keypoint_size
+            keypoints_data['size (nm^2)'][i] = math.pi*(true_keypoint_size/2)**2
+                
+        particle_info_columns = ['coordinates',
+                                'perfect circle diameter (px)',
+                                'perfect circle size (px)',
+                                'contour perimiter (px)',                             
+                                'true area of particle (px)',
+                                'diameter from true area (px)',
+                                'sphericality',
+                                'perfect circle diameter (nm)',
+                                'perfect circle size (nm^2)',
+                                'contour perimiter (nm)',
+                                'true area of particle (nm^2)',                             
+                                'diameter from true area (nm)'
+                                ]
+        
+        particle_data = pd.DataFrame(columns=particle_info_columns)
+        particle_data['perfect circle diameter (px)'] = np.zeros(len(contours))
+        
+        print(particle_data.columns)
         for i in range(len(particle_data)):
-            particle_data['coordinates'][i] = particles[i].pt
-            particle_data['diameter (px)'][i] = particles[i].size
-            particle_data['size (px^2)'][i] = math.pi*(particles[i].size/2)**2
-            true_particle_size = pixelsize*particles[i].size
-            particle_data['diameter (nm)'][i] = true_particle_size
-            particle_data['size (nm^2)'][i] = math.pi*(true_particle_size/2)**2
-
-        metadata['average_particle_diameter_px'] = str(particle_data['diameter (px)'].to_numpy().mean())+' px'
-        metadata['average_particle_diameter_nm'] = str(particle_data['diameter (nm)'].to_numpy().mean())+' nm'
+            particle = contours[i]
+            
+            (x, y), radius = cv.minEnclosingCircle(particle)
+            perimeter = cv.arcLength(particle, True)
+            area = cv.contourArea(particle)
+            assumed_diameter = 2 * math.sqrt(area / math.pi)
+            sphericality = (4 * math.pi * area) / (perimeter * perimeter)
+            
+            particle_data['coordinates'][i] = (x, y)
+            particle_data['perfect circle diameter (px)'][i] = radius*2
+            particle_data['perfect circle size (px)'][i] = math.pi*(radius)**2
+            particle_data['contour perimiter (px)'][i] = perimeter
+            particle_data['true area of particle (px)'][i] = area
+            particle_data['diameter from true area (px)'][i] = assumed_diameter
+            particle_data['sphericality'][i] = sphericality
+            true_circle_cize = pixelsize*radius
+            particle_data['perfect circle diameter (nm)'][i] = true_circle_cize*2
+            particle_data['perfect circle size (nm^2)'][i] = math.pi*(true_circle_cize)**2
+            particle_data['contour perimiter (nm)'][i] = perimeter*pixelsize 
+            particle_data['true area of particle (nm^2)'][i] = area*pixelsize*pixelsize
+            particle_data['diameter from true area (nm)'][i] = 2 * math.sqrt(area*pixelsize*pixelsize / math.pi)
+            
+        metadata['perfect_circle_average_particle_diameter_px'] = str(particle_data['perfect circle diameter (px)'].to_numpy().mean())+' px'
+        metadata['perfect_circle_average_particle_diameter_nm'] = str(particle_data['perfect circle diameter (nm)'].to_numpy().mean())+' nm'
+        metadata['true_average_particle_area_px'] = str(particle_data['true area of particle (px)'].to_numpy().mean())+' px'
+        metadata['true_average_particle_area_nm^2'] = str(particle_data['true area of particle (nm^2)'].to_numpy().mean())+' nm^2'   
+        metadata['estimated_average_particle_diameter_px'] = str(particle_data['diameter from true area (px)'].to_numpy().mean())+' px'
+        metadata['estimated_average_particle_diameter_nm'] = str(particle_data['diameter from true area (nm)'].to_numpy().mean())+' nm'
+        
+        
         metadata = pd.DataFrame.from_dict(metadata, orient='index')
         metadata.to_csv(metadata_path,header=False)
 
+        keypoints_data.to_csv(keypoints_data_path)
         particle_data.to_csv(particle_data_path)
-
+        
         canvas2.get_tk_widget().pack_forget() 
         fig2,ax2 = plt.subplots(figsize=(3,2))
         result_message = ''
         if pixelsize > 0:
-            ax2.hist((particle_data['diameter (nm)'].to_numpy()),bins=25)
-            result_message = 'Average particle diameter: {:.2f}'.format((particle_data['diameter (nm)'].to_numpy().mean()))+" nm"
+            ax2.hist((particle_data['diameter from true area (nm)'].to_numpy()),bins=25)
+            result_message = 'Average particle diameter: {:.2f}'.format((particle_data['diameter from true area (nm)'].to_numpy().mean()))+" nm"
             ax2.set_xlabel('particle diameter (nm)')
         else:
-            ax2.hist((particle_data['diameter (px)'].to_numpy()),bins=25)
-            result_message = 'Average particle diameter: {:.2f}'.format((particle_data['diameter (px)'].to_numpy().mean()))+" nm"
+            ax2.hist((particle_data['diameter from true area (px)'].to_numpy()),bins=25)
+            result_message = 'Average particle diameter: {:.2f}'.format((particle_data['diameter from true area (px)'].to_numpy().mean()))+" nm"
             ax2.set_xlabel('particle diameter (px)')
-            
-        
-        coverage_results.config(text = result_message+"\nTotal particles detected: "+str(len(particles)))
+
+
+        coverage_results.config(text = result_message+"\nTotal particles detected: "+str(len(contours)))
         ax2.set_ylabel('frequency')
         fig2.tight_layout()
         fig2.savefig(histogram_path, dpi=300) 
-        
+
         canvas2 = FigureCanvasTkAgg(fig2, area_frame)
         canvas2.get_tk_widget().pack(pady = (10,0))
 
@@ -331,7 +402,7 @@ def detect_particles():
         fig.tight_layout()
         canvas = FigureCanvasTkAgg(fig, root)
         canvas.get_tk_widget().pack(padx = 5,pady = (30,0))
-        result_label.config(text = "Results saved in: "+new_file_path)
+        result_label.config(text = "Results saved in: "+contour_file_path)
     except:
         l2.config(text = "No file found")
     return
@@ -429,9 +500,13 @@ def enhance_contrast():
        
     file_name = file_path.get()
 
-    img = cv.imread(file_name)  
-    img = img-np.amin(img)
-    img = img*(255/np.amax(img))
+    img = cv.imread(file_name)
+    
+    min_val = np.amin(img)
+    max_val = np.amax(img)
+
+    img = (((img-min_val)/(max_val-min_val))*255).astype(np.uint8)
+
 
     file_name = file_name.split('/')[-1]
 
@@ -463,12 +538,52 @@ def enhance_contrast():
     
     return
 
+def change_brightness():
+    empty_messages()
+       
+    file_name = file_path.get()
+
+    img = cv.imread(file_name)  
+    beta =brightness.get()
+    img = cv.convertScaleAbs(img, alpha=1, beta=beta)
+
+    file_name = file_name.split('/')[-1]
+
+    source_file_name = h1.cget("text")[:-4]
+    results_folder = 'Results/'+source_file_name
+
+    file_name = file_name.split('/')[-1]
+    
+    prefix = get_unique_prefix(results_folder)
+    
+    suffix = ''
+    
+    if('_inverse_' in file_name):
+        prefix += '_inverse'
+    
+    if('_croped' in file_name):
+        suffix = '_croped'
+    
+    prefix += '_enhanced'
+    
+    new_file_path = results_folder+"/"+prefix+'_'+source_file_name+suffix+".png"
+
+
+    w1.delete(0,tk.END)
+    w1.insert(0,new_file_path)          
+    cv.imwrite(os.path.join(new_file_path), img)
+    result_label.config(text = "Results saved in: "+new_file_path)
+    soft_load_image()
+    
+    return
+
 root = tk.Tk()  
 root.title("Simple TEM particle detector")  
 root.geometry("1200x900") 
 #variables in tkinter widget
-file_path = tk.StringVar()
+file_path = tk.StringVar(value='')
 v1 = tk.IntVar(value=79)
+brightness = tk.IntVar(value=0)
 pixel_size = tk.DoubleVar(value = 1)
 #create image field
 fig, ax = plt.subplots(figsize=(10,10))
@@ -519,8 +634,13 @@ b4 = tk.Button(crop_frame, text="Crop Bottom", command=crop_image)
 pixel_size_label = tk.Label(preproces_frame_1, text="pixel width:",justify=tk.LEFT)
 
 
-b3_1 = tk.Button(preproces_frame_2, text="Enhance Contrast", command=enhance_contrast,width=31)
+b3_1 = tk.Button(preproces_frame_2, text="Enhance Contrast", command=enhance_contrast,width=36)
 
+contrast_frame = tk.Frame(preproces_frame_2,width=120)
+
+s3_2 = tk.Scale(contrast_frame, variable = brightness, from_ = -255, to = 255, resolution=1, orient = tk.HORIZONTAL) 
+e3_2 = tk.Entry(contrast_frame, textvariable=brightness,width=5)
+b3_2 = tk.Button(contrast_frame, text="Change Brightness", command=change_brightness,width=15)
 
 l3.pack(anchor=tk.NW,pady = (10,0))
 b2.pack(anchor=tk.NW)
@@ -534,8 +654,13 @@ crop_frame.pack(anchor=tk.NW)
 preproces_glob_frame.pack(anchor=tk.NW)
 
 b3_1.pack(anchor=tk.NW)
-pixel_size_label.pack(anchor=tk.NW)
 
+s3_2.pack(side=tk.LEFT,pady = (0,0))
+e3_2.pack(side=tk.LEFT,pady=(17,0))
+b3_2.pack(side=tk.RIGHT,pady = (8,0),padx=(7,0))
+contrast_frame.pack(anchor=tk.NW)
+
+pixel_size_label.pack(anchor=tk.NW)
 preproces_frame_1.pack(side=tk.LEFT,anchor=tk.NW)
 preproces_frame_2.pack(side=tk.RIGHT,anchor=tk.NW,padx=15)
 analyze_frame.pack()
@@ -553,7 +678,7 @@ minInertiaRatio = tk.DoubleVar(value=0.08)
 
 filterByArea = tk.BooleanVar(value=True)
 minArea = tk.IntVar(value = 10) 
-maxArea = tk.IntVar(value = 1000000) 
+maxArea = tk.IntVar(value = 600) 
 
 filterByCircularity = tk.BooleanVar(value=False)
 minCircularity = tk.DoubleVar(value = 0.1) 
@@ -572,7 +697,7 @@ e1 = tk.Entry(threshold_frame_1, textvariable=minThreshold,width=5)
 e2 = tk.Entry(threshold_frame_2, textvariable=maxThreshold,width=5)
 
 l5_2 = tk.Label(threshold_frame_3, text="Threshold \nStep",justify=tk.LEFT)
-s2_2 = tk.Scale(threshold_frame_3, variable = thresholdStep, from_ = 0, to = 5, resolution=0.5, orient = tk.HORIZONTAL)  
+s2_2 = tk.Scale(threshold_frame_3, variable = thresholdStep, from_ = 0, to = 50, resolution=0.1, orient = tk.HORIZONTAL)  
 e2_2 = tk.Entry(threshold_frame_3, textvariable=thresholdStep,width=5)
 
 convexity_frame_1 = tk.Frame(detect_frame,width=120)
@@ -600,7 +725,7 @@ l10 = tk.Label(area_frame_1, text="Filter by Area",justify=tk.LEFT)
 l11 = tk.Label(area_frame_2, text="Minimal Area\nSize",justify=tk.LEFT)
 
 l11_1 = tk.Label(area_frame_3, text="Maximal Area\nSize",justify=tk.LEFT)
-s11_1 = tk.Scale(area_frame_3, variable = maxArea, from_ = 0, to = 1000000, resolution=1, orient = tk.HORIZONTAL)  
+s11_1 = tk.Scale(area_frame_3, variable = maxArea, from_ = 0, to = 100000, resolution=1, orient = tk.HORIZONTAL)  
 e11_1 = tk.Entry(area_frame_3, textvariable=maxArea,width=10)
 
 r10 = tk.Checkbutton(area_frame_1, variable=filterByArea)
