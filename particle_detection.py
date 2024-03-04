@@ -72,9 +72,9 @@ def load_image():
         for k, v in exifdata.items():
             temp = str(v).split('\r\n')
             for part in temp:
-                 if('Pixel Size' in part):
+                 if('Image Pixel Size' in part):
                     part = part.split(' = ')
-                    if(part[0] == 'Pixel Size'):
+                    if(part[0] == 'Image Pixel Size'):
                         size = part[1]
         pixel_size_label.config(text = "pixel width: "+size)
         
