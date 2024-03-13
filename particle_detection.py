@@ -13,7 +13,6 @@ import PIL.ExifTags
 
 unit_dict = {'nm':1e-9,'um':1e-6,'mm':1e-3,'pm':1e-12}
 
-
 def empty_messages():
     global canvas,canvas2
     coverage_results.config(text = "\n")
@@ -42,19 +41,28 @@ def load_image():
 
         folder = file_path.get().replace('\\','/').split('/')
         if(folder[0] == "Results"):
-            file_name = folder[1]
-            h1.config(text = file_name+'.tif')
+
+            file_name = None         
+            files_list = os.listdir(folder)
+            for file in files_list:
+                if "0000_original" in file:
+                    file_name = file
+                    break
+
+            file_name = file_name[14:0]
+            h1.config(text = file_name)
 
         else:        
             if not os.path.exists('Results'):
                 os.makedirs('Results')
 
+            print('test')
 
-            results_folder = 'Results/'+file_name[:-4]
+            results_folder = 'Results/'+''.join(file_name.split('.')[:-1])
 
             if not os.path.exists(results_folder):
                 os.makedirs(results_folder) 
-            original_location = results_folder+"/0000_original_"+file_name[:-4]+".tif"
+            original_location = results_folder+"/0000_original_"+file_name
 
             if(os.path.isfile(original_location) == True):
                 restore_original()
@@ -63,21 +71,26 @@ def load_image():
                 restore_original()
 
         file_name = h1.cget("text")        
-        results_folder = 'Results/'+file_name[:-4]        
-        original_location = results_folder+"/0000_original_"+file_name[:-4]+".tif"   
+        results_folder = 'Results/'+''.join(file_name.split('.')[:-1])      
+        original_location = results_folder+"/0000_original_"+file_name 
 
-        sourceimg = Image.open(original_location)
-        exifdata = sourceimg.getexif()
         size = '0 nm'
-        for k, v in exifdata.items():
-            temp = str(v).split('\r\n')
-            for part in temp:
-                 if('Image Pixel Size' in part):
-                    part = part.split(' = ')
-                    if(part[0] == 'Image Pixel Size'):
-                        size = part[1]
+
+        try:
+            sourceimg = Image.open(original_location)
+            exifdata = sourceimg.getexif()
+
+            for k, v in exifdata.items():
+                temp = str(v).split('\r\n')
+                for part in temp:
+                     if('Image Pixel Size' in part):
+                        part = part.split(' = ')
+                        if(part[0] == 'Image Pixel Size'):
+                            size = part[1]
+        except:
+            size = '0 nm'
         pixel_size_label.config(text = "pixel width: "+size)
-        
+
     except:
         l2.config(text = "No file found")   
     
@@ -99,14 +112,24 @@ def soft_load_image():
     
 def restore_original():
     empty_messages()
-    try:        
-        file_name = h1.cget("text")
-        results_folder = 'Results/'+file_name[:-4]
-        w1.delete(0,tk.END)
-        w1.insert(0,results_folder+"/0000_original_"+file_name[:-4]+".tif")
-        soft_load_image()        
-    except:
-        l2.config(text = "No file found")
+    #try:        
+    file_name = h1.cget("text")
+    results_folder = 'Results/'+''.join(file_name.split('.')[:-1])
+    w1.delete(0,tk.END)
+
+    files_list = os.listdir(results_folder)
+    
+    file_name = None
+
+    for file in files_list:
+        if "0000_original" in file:
+            file_name = file
+            break
+
+    w1.insert(0,results_folder+"/"+file_name)
+    soft_load_image()        
+    #except:
+        #l2.config(text = "No file found")
     return
 
 def get_unique_prefix(loc):
@@ -130,17 +153,16 @@ def get_unique_prefix(loc):
             
     return '{0}'.format(str(counter).zfill(4))
 
-
 def invert_image():
     global w1,canvas
     empty_messages()
     try:        
-        source_file_name = h1.cget("text")[:-4]
+        source_file_name = ''.join(h1.cget("text").split('.')[:-1])
         results_folder = 'Results/'+source_file_name
         
         file_name = file_path.get()
         img = cv.imread(file_name)
-        file_name = file_name.split('/')[-1][:-4]
+        file_name = ''.join((file_name.split('/')[-1]).split('.')[:-1])
         
         
         prefix = get_unique_prefix(results_folder)
@@ -174,13 +196,13 @@ def crop_image():
         img = cv.imread(file_name)    
         y = img.shape[0]-v1.get()
         x = img.shape[1]
-        crop = img[0:y, 0:x]
-        file_name = file_name.split('/')[-1]
-
-        source_file_name = h1.cget("text")[:-4]
+        crop = img[0:y, 0:x]        
+        
+        
+        source_file_name = ''.join(h1.cget("text").split('.')[:-1])
         results_folder = 'Results/'+source_file_name
 
-        file_name = file_name.split('/')[-1]
+        file_name = ''.join((file_name.split('/')[-1]).split('.')[:-1])
         
         prefix = get_unique_prefix(results_folder)
     
@@ -203,7 +225,6 @@ def crop_image():
     except:
         l2.config(text = "No file found")
     return
-
 
 def detect_particles():
     global canvas,canvas2
@@ -245,10 +266,10 @@ def detect_particles():
         im_with_keypoints = cv.drawKeypoints(img, keypoints, np.array([]), (0, 0, 255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         im_with_particles = cv.drawContours(img, contours, -1, (0, 0, 255), 1)
 
-        file_name = file_name.split('/')[-1][:-4]
-
-        original_file_name = h1.cget("text")
-        results_folder = 'Results/'+original_file_name[:-4] 
+        file_name = ''.join((file_name.split('/')[-1]).split('.')[:-1])
+        
+        source_file_name = ''.join(h1.cget("text").split('.')[:-1])
+        results_folder = 'Results/'+source_file_name       
 
         prefix = get_unique_prefix(results_folder)
 
@@ -325,7 +346,9 @@ def detect_particles():
                                 'contour perimiter (px)',                             
                                 'true area of particle (px)',
                                 'diameter from true area (px)',
-                                'sphericality',
+                                'circularity',
+                                'inertia',
+                                'convexity',
                                 'perfect circle diameter (nm)',
                                 'perfect circle size (nm^2)',
                                 'contour perimiter (nm)',
@@ -336,15 +359,37 @@ def detect_particles():
         particle_data = pd.DataFrame(columns=particle_info_columns)
         particle_data['perfect circle diameter (px)'] = np.zeros(len(contours))
         
-        print(particle_data.columns)
         for i in range(len(particle_data)):
-            particle = contours[i]
-            
+            particle = contours[i]             
+
             (x, y), radius = cv.minEnclosingCircle(particle)
             perimeter = cv.arcLength(particle, True)
             area = cv.contourArea(particle)
             assumed_diameter = 2 * math.sqrt(area / math.pi)
-            sphericality = (4 * math.pi * area) / (perimeter * perimeter)
+            
+            #calculate circularity
+            circularity = (4 * math.pi * area) / (perimeter * perimeter)
+            
+            M = cv.moments(particle)
+           
+            #calculate convexity
+            hull = cv.convexHull(particle)
+            area_hull = cv.contourArea(hull)
+            convexity = area / area_hull
+            
+            # calculate inertia
+            denominator = np.sqrt((2 * M['mu11'])**2 + (M['mu20'] - M['mu02'])**2)
+            inertia = 1
+            if (denominator > 1e-2):              
+
+                cosmin = (M['mu20'] - M['mu02']) / denominator;
+                sinmin = 2 * M['mu11'] / denominator;
+                cosmax = -cosmin;
+                sinmax = -sinmin;
+
+                imin = 0.5 * (M['mu20'] + M['mu02']) - 0.5 * (M['mu20'] - M['mu02']) * cosmin - M['mu11'] * sinmin;
+                imax = 0.5 * (M['mu20'] + M['mu02']) - 0.5 * (M['mu20'] - M['mu02']) * cosmax - M['mu11'] * sinmax;
+                inertia = imin / imax;             
             
             particle_data['coordinates'][i] = (x, y)
             particle_data['perfect circle diameter (px)'][i] = radius*2
@@ -352,7 +397,9 @@ def detect_particles():
             particle_data['contour perimiter (px)'][i] = perimeter
             particle_data['true area of particle (px)'][i] = area
             particle_data['diameter from true area (px)'][i] = assumed_diameter
-            particle_data['sphericality'][i] = sphericality
+            particle_data['circularity'][i] = circularity
+            particle_data['inertia'][i] = inertia
+            particle_data['convexity'][i] = convexity
             true_circle_cize = pixelsize*radius
             particle_data['perfect circle diameter (nm)'][i] = true_circle_cize*2
             particle_data['perfect circle size (nm^2)'][i] = math.pi*(true_circle_cize)**2
@@ -407,7 +454,6 @@ def detect_particles():
         l2.config(text = "No file found")
     return
 
-
 def get_coverage():
     global canvas,canvas2
     empty_messages()
@@ -441,11 +487,13 @@ def get_coverage():
         white_percent = float(white_px)/float(total_px)*100
         black_percent = float(black_px)/float(total_px)*100
 
-        original_file_name = h1.cget("text")[:-4]
-        results_folder = 'Results/'+original_file_name 
+        source_file_name = ''.join(h1.cget("text").split('.')[:-1])
+        results_folder = 'Results/'+source_file_name
+
+        
         prefix = get_unique_prefix(results_folder)
 
-        file_name = file_name.split('/')[-1][:-4]
+        file_name = ''.join((file_name.split('/')[-1]).split('.')[:-1])
 
         grey_im_path = results_folder+"/"+prefix+"_greyscale_"+file_name+".png"
         bw_im_path = results_folder+"/"+prefix+"_binary_"+file_name+".png"     
@@ -508,12 +556,10 @@ def enhance_contrast():
     img = (((img-min_val)/(max_val-min_val))*255).astype(np.uint8)
 
 
-    file_name = file_name.split('/')[-1]
-
-    source_file_name = h1.cget("text")[:-4]
+    source_file_name = ''.join(h1.cget("text").split('.')[:-1])
     results_folder = 'Results/'+source_file_name
+    file_name = ''.join((file_name.split('/')[-1]).split('.')[:-1])
 
-    file_name = file_name.split('/')[-1]
     
     prefix = get_unique_prefix(results_folder)
     
@@ -547,12 +593,10 @@ def change_brightness():
     beta =brightness.get()
     img = cv.convertScaleAbs(img, alpha=1, beta=beta)
 
-    file_name = file_name.split('/')[-1]
-
-    source_file_name = h1.cget("text")[:-4]
+    source_file_name = ''.join(h1.cget("text").split('.')[:-1])
     results_folder = 'Results/'+source_file_name
+    file_name = ''.join((file_name.split('/')[-1]).split('.')[:-1])
 
-    file_name = file_name.split('/')[-1]
     
     prefix = get_unique_prefix(results_folder)
     

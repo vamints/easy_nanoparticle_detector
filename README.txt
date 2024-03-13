@@ -41,7 +41,10 @@ Data stored about particles:
   contour perimiter - the perimiter of the nanoparticle
   true area of particle - the true area of enclosed by the detected contour
   diameter from true area - the diameter calculated from the true area assuming a perfect sphericality
-  sphericality - the sphericality of the detected particle where 1 is a perfect circle
+  circularity - the circularity of the detected particle where 1 is a perfect circle. Calculated by 4piArea/Perimiter^2
+  convexity - The convexity calculated as: area of particle / area convex hull
+  inertia - As calculated by the CV2 blobdetector algorithm
 
+ 
 When using please cite the package as:
 Mints, V. A. (2024). easy_nanoparticle_detector. GitHub. https://github.com/vamints/easy_nanoparticle_detector
